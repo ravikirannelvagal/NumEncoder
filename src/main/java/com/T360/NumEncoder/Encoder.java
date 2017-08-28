@@ -26,6 +26,7 @@ public class Encoder
 		/* Dictionary Helper class, that generates Number Strings and 
 		 * helps in storing the dictionary values in the collection */
 		DictHelper dh = new DictHelper();
+		
 		try {
 			// populate the Dictionary to the collection 
 			encoder.populateMyDictionary(dh);
@@ -101,42 +102,64 @@ public class Encoder
 		InputStream inpStream = getClass().getResourceAsStream(EncoderUtils.inputFile);
 		BufferedReader br = new BufferedReader(new InputStreamReader(inpStream));
 		String ip=null;
+		ArrayList<String> finalList=new ArrayList<String>();
 		// Read the input numbers
 		while((ip=br.readLine()) != null){
 			// Replace invalid characters in the input string
 			String simplifiedNumStr=ip.replace("-", "");
 			simplifiedNumStr=simplifiedNumStr.replace("/", "");
+			if(simplifiedNumStr.length()<2)
+				continue;
 			// Get the first character of the input string and get the list of all words whose encoded value matches
 			String firstChar = Character.toString(simplifiedNumStr.charAt(0));
 			ArrayList<MyWords> matchingWords = myDictionary.get(Integer.parseInt(firstChar));
 			if(matchingWords == null){
+				//System.out.println("first character didn't have any matches");
 				// if there are no words that start with the encoded value, then skip the first character and get the list of words starting with the second character.
 				String skipOneChar=Character.toString(simplifiedNumStr.charAt(1));
 				matchingWords=myDictionary.get(Integer.parseInt(skipOneChar));
 				// for the substring from the current position to the end of the string, check if there are words that match.
 				String simplifiedNumSubStr=simplifiedNumStr.substring(1, simplifiedNumStr.length());
-				ArrayList<String> skippedMatches=checkForMatch(dh,matchingWords,simplifiedNumSubStr);
+				ArrayList<String> skippedMatches=checkForMatch(dh,matchingWords,simplifiedNumSubStr,true,"");
 				// for each of the matches that are found, append the first character that was skipped and print the result on screen.
 				for(String s:skippedMatches){
-					System.out.println(ip+":"+simplifiedNumStr.charAt(0)+" "+s);
+					if(!finalList.contains(ip+":"+simplifiedNumStr.charAt(0)+" "+s))
+						finalList.add(ip+":"+simplifiedNumStr.charAt(0)+" "+s);
+					
+				}
+				ArrayList<String> skippedMatchesRev=checkForMatchReverse(dh,matchingWords,simplifiedNumSubStr,true,Character.toString(simplifiedNumStr.charAt(0)));
+				for(String s:skippedMatchesRev){
+					if(!finalList.contains(ip+":"+simplifiedNumStr.charAt(0)+" "+s))
+						finalList.add(ip+":"+simplifiedNumStr.charAt(0)+" "+s);
 				}
 			}else{
+				//System.out.println("first character has matches");
 				// for the substring from the current position to the end of the string, check if there are words that match.
-				ArrayList<String> matches=checkForMatch(dh,matchingWords,simplifiedNumStr);
+				ArrayList<String> matches=checkForMatch(dh,matchingWords,simplifiedNumStr,false,"");
 				// the above arraylist contains all the words that are matching. print the result on the screen.
 				for(String s:matches){
-					System.out.println(ip+":"+s);
+					if(!finalList.contains(ip+":"+s))
+						finalList.add(ip+":"+s);
+				}
+				ArrayList<String> matchesRev=checkForMatchReverse(dh,matchingWords,simplifiedNumStr,false,"");
+				for(String s:matchesRev){
+					if(!finalList.contains(ip+":"+s))
+						finalList.add(ip+":"+s);
 				}
 			}
 		}
 		// close the buffered reader and the input stream.
 		br.close();
 		inpStream.close();
+		
+		for(String s: finalList){
+			System.out.println(s);
+		}
 	}
 	
 	/*
 	 * Method: checkForMatch
-	 * Input: DictHelper, ArrayList<MyWords>, String
+	 * Input: DictHelper, ArrayList<MyWords>, String, boolean, String
 	 * Return: ArrayList<String>
 	 * Description: The input string is the string that needs to be matched. 
 	 * 				The input string when encoded should match with the numeric 
@@ -144,15 +167,17 @@ public class Encoder
 	 * 				Return as many matches as found.
 	 *				
 	 * */
-	private ArrayList<String> checkForMatch(DictHelper dh,ArrayList<MyWords> matchingWords, String inpStr){
+	private ArrayList<String> checkForMatch(DictHelper dh,ArrayList<MyWords> matchingWords, String inpStr, boolean isCharSkipped,String prefix){
 		StringBuffer sb = new StringBuffer();
 		ArrayList<String> matches = new ArrayList<String>();
 		ArrayList<String> secMatches = new ArrayList<String>();
 		int startPos = 0;
+		boolean loc_isCharSkipped=isCharSkipped;
 		
 		for(int i=1;i<inpStr.length();i++){
 			// get the substring of the input string
 			String subStr=inpStr.substring(startPos, i+1);
+			//System.out.println(matchingWords.size());
 			// loop over all the MyWords in the ArrayList that can be potential matches.
 			for(MyWords m:matchingWords){
 				String nextString="";
@@ -173,15 +198,18 @@ public class Encoder
 						// get the arraylist of MyWords that match the next character.
 						ArrayList<MyWords> nextList=myDictionary.get(Integer.parseInt(nextStart));
 						if(nextList == null){
+							if(loc_isCharSkipped)
+								continue;//return new ArrayList<String>();
+							loc_isCharSkipped=true;
 							// if there are no words that match the starting character, then skip a character and continue from the second character.
 							String skipOneChar = Character.toString(nextString.charAt(1));
 							// get the arraylist of MyWords that match the next character after the skipped character.
 							nextList=myDictionary.get(Integer.parseInt(skipOneChar));
 							String nextStringSubStr=nextString.substring(1, nextString.length());
 							// Call a modified form of the current method which replicates recursion in a different way
-							ArrayList<String> skippedMatches=checkForSkippedMatch(dh,nextList,nextStringSubStr);
+							ArrayList<String> skippedMatches=checkForMatch(dh,nextList,nextStringSubStr,loc_isCharSkipped,"");
 							if(skippedMatches.size() ==0){
-								return new ArrayList<String>();
+								continue;//return new ArrayList<String>();
 							}
 							// for each of the matches found for the string with one skipped character, add the skipped character to the list of matches found
 							for(String s:skippedMatches){
@@ -189,8 +217,10 @@ public class Encoder
 									secMatches.add(partOne+" "+nextString.charAt(0)+" "+s);
 							}
 						}else{
+							if(!loc_isCharSkipped)
+								loc_isCharSkipped=false;
 							// for each of the matches found for the string add the first part of the match to the each string in the list of matches found
-							ArrayList<String> secMatchRes=checkForMatch(dh, nextList, nextString);
+							ArrayList<String> secMatchRes=checkForMatch(dh, nextList, nextString,loc_isCharSkipped,"");
 							for(String s:secMatchRes){
 								if(!secMatches.contains(partOne+" "+s))
 									secMatches.add(partOne+" "+s);
@@ -206,26 +236,29 @@ public class Encoder
 					}
 					// for each of the matches found add the secondary matches to the list of overall matches
 					for(String s:secMatches){
-						if(!matches.contains(s))
-							matches.add(s);
+						if(!matches.contains(prefix+s))
+							matches.add(prefix+s);
 					}
 					
 					if(secMatches.size()==0){
+						if(loc_isCharSkipped)
+							continue;//return new ArrayList<String>();
+						loc_isCharSkipped=true;
 						// if there are no secondary matches found immediately, then skip one character and start finding matches.
 						String skipOneChar = Character.toString(nextString.charAt(1));
 						ArrayList<MyWords>nextList=myDictionary.get(Integer.parseInt(skipOneChar));
 						String nextStringSubStr=nextString.substring(1, nextString.length());
-						ArrayList<String> skippedMatches=checkForSkippedMatch(dh,nextList,nextStringSubStr);
+						ArrayList<String> skippedMatches=checkForMatch(dh,nextList,nextStringSubStr,loc_isCharSkipped,"");
 						if(skippedMatches.size() ==0){
-							return new ArrayList<String>();
+							continue;//return new ArrayList<String>();
 						}
 						for(String s:skippedMatches){
 							if(!secMatches.contains(partOne+" "+nextString.charAt(0)+" "+s))
 								secMatches.add(partOne+" "+nextString.charAt(0)+" "+s);
 						}
 						for(String s:secMatches){
-							if(!matches.contains(s))
-								matches.add(s);
+							if(!matches.contains(prefix+s))
+								matches.add(prefix+s);
 						}
 					}
 				}
@@ -235,6 +268,104 @@ public class Encoder
 		
 		return matches;
 	}
+	
+	
+	/*
+	 * Method: checkForMatchReverse
+	 * Input: DictHelper, ArrayList<MyWords>, String, boolean, String
+	 * Return: ArrayList<String>
+	 * Description: The input string is the string that needs to be matched. 
+	 * 				The input string when encoded should match with the numeric 
+	 * 				string of any word that is present in the ArrayList. 
+	 * 				Return as many matches as found.
+	 * 				This is a modified form of the original checkForMatch method
+	 * 				This method is an indicator that a character has already been skipped
+	 * 				The check begins by starting with a full word match and then one 
+	 * 				letter is skipped from the beginning of the string based on 
+	 * 				previous character skip condition and matched
+	 *				
+	 * */
+	private ArrayList<String> checkForMatchReverse(DictHelper dh,ArrayList<MyWords> matchingWords, String inpStr, boolean isCharSkipped,String prefix){
+		StringBuffer sb = new StringBuffer();
+		ArrayList<String> matches = new ArrayList<String>();
+		ArrayList<String> secMatches = new ArrayList<String>();
+		int startPos = 0;
+		boolean isMatchFound=false;
+		boolean loc_isCharSkipped=isCharSkipped;
+		
+		for(MyWords m:matchingWords){
+			//System.out.print(inpStr);
+			//System.out.println(":m->"+m.getNumString());
+			if(m.getNumString().equals(inpStr)){
+				matches.add(prefix+m.getDictWord());
+				String newSubStr=inpStr.substring(1, inpStr.length());
+				if(loc_isCharSkipped){
+					continue;//return matches;
+				}
+				loc_isCharSkipped=true;
+				String skippedStr = Character.toString(inpStr.charAt(0));
+				String newPrefix=prefix+skippedStr+" ";
+				ArrayList<MyWords> listAfterSkip = myDictionary.get(Integer.parseInt(skippedStr));
+				if(listAfterSkip == null)
+					continue;//return matches;
+				else{
+					ArrayList<String> skippedMatchRev= checkForMatchReverse(dh,listAfterSkip,newSubStr,loc_isCharSkipped,newPrefix);
+					ArrayList<String> skippedMatchAct= checkForMatch(dh,listAfterSkip,newSubStr,loc_isCharSkipped,newPrefix);
+					if(skippedMatchRev.size()==0 && skippedMatchAct.size()==0)
+						continue;//return matches;
+					else{
+						for(String s:skippedMatchRev){
+							if(!matches.contains(s)){
+								matches.add(s);
+							}
+						}
+						
+						for(String s:skippedMatchAct){
+							if(!matches.contains(s)){
+								matches.add(s);
+							}
+						}
+					}
+				}
+				loc_isCharSkipped=false;
+			}else{
+				if(loc_isCharSkipped){
+					continue;//return matches;
+				}
+				String newSubStr=inpStr.substring(1, inpStr.length());
+				loc_isCharSkipped=true;
+				String skippedStr = Character.toString(inpStr.charAt(0));
+				
+				String nextChar = Character.toString(inpStr.charAt(1));
+				String newPrefix=prefix+skippedStr+" ";
+				ArrayList<MyWords> listAfterSkip = myDictionary.get(Integer.parseInt(nextChar));
+				if(listAfterSkip == null)
+					continue;//return matches;
+				else{
+					ArrayList<String> skippedMatchRev= checkForMatchReverse(dh,listAfterSkip,newSubStr,loc_isCharSkipped,newPrefix);
+					ArrayList<String> skippedMatchAct= checkForMatch(dh, listAfterSkip, newSubStr, loc_isCharSkipped,newPrefix);
+					if(skippedMatchRev.size()==0 && skippedMatchAct.size()==0)
+						continue;//return matches;
+					else{
+						for(String s:skippedMatchRev){
+							if(!matches.contains(s)){
+								matches.add(s);
+							}
+						}
+						
+						for(String s:skippedMatchAct){
+							if(!matches.contains(s)){
+								matches.add(s);
+							}
+						}
+					}
+				}
+			}
+			
+		}
+		return matches;
+	}
+	
 	
 	/*
 	 * Method: checkForSkippedMatch
@@ -264,7 +395,7 @@ public class Encoder
 					if(nextString.length()>1){
 						String nextStart = Character.toString(nextString.charAt(0));
 						ArrayList<MyWords> nextList=myDictionary.get(Integer.parseInt(nextStart));
-						ArrayList<String> secMatchRes=checkForMatch(dh, nextList, nextString);
+						ArrayList<String> secMatchRes=checkForMatch(dh, nextList, nextString,true,"");
 						for(String s:secMatchRes){
 							if(!secMatches.contains(partOne+" "+s))
 								secMatches.add(partOne+" "+s);

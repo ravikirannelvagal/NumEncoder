@@ -1,17 +1,21 @@
 package com.T360.NumEncoder.Utils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class DictHelper{
 
 	public HashMap<String, Integer> charEncodingRefMap= new HashMap<String, Integer>();
+
 	
 	public DictHelper(){
 		/* Based on the given input form a Hashmap that holds the int value for each letter */
+		
 		charEncodingRefMap.put("E", 0);
 		charEncodingRefMap.put("e", 0);
 		charEncodingRefMap.put("E\"", 0);
 		charEncodingRefMap.put("e\"", 0);
+		
 		
 		charEncodingRefMap.put("J", 1);
 		charEncodingRefMap.put("j", 1);
@@ -20,6 +24,7 @@ public class DictHelper{
 		charEncodingRefMap.put("Q", 1);
 		charEncodingRefMap.put("q", 1);
 		
+		
 		charEncodingRefMap.put("R", 2);
 		charEncodingRefMap.put("r", 2);
 		charEncodingRefMap.put("W", 2);
@@ -27,12 +32,14 @@ public class DictHelper{
 		charEncodingRefMap.put("X", 2);
 		charEncodingRefMap.put("x", 2);
 		
+		
 		charEncodingRefMap.put("D", 3);
 		charEncodingRefMap.put("d", 3);
 		charEncodingRefMap.put("S", 3);
 		charEncodingRefMap.put("s", 3);
 		charEncodingRefMap.put("Y", 3);
 		charEncodingRefMap.put("y", 3);
+		
 		
 		charEncodingRefMap.put("F", 4);
 		charEncodingRefMap.put("f", 4);
@@ -98,4 +105,5 @@ public class DictHelper{
 		}
 		return sb.toString();
 	}
+	
 }
